@@ -1,3 +1,6 @@
+import module_manager
+module_manager.ignore_module('imutils.video')
+module_manager.review()
 # import the necessary packages
 from imutils.video import VideoStream
 from imutils.video import FPS
@@ -6,9 +9,34 @@ import argparse
 import imutils
 import time
 import cv2
+import pytesseract
+
+
+class meds():
+    def __init__(self, name, period, count):
+        self.name = name
+        self.period = period
+        self.count = count
+
+    def takePillNow(self):
+        x =  time.localtime()
+        if x[3] == self.period:
+            return True
+        if x[3] == self.period - 1:
+            if x[4] > 30:
+                return True
+        return False
+
+    def takePillString(self):
+        return "Take $d pills" %d(self.count)
+
+r815137 = "815137"
+r844275 = "844275"
+ibu = "Ibuprofe"
+colbottle = (255,255,255)
 
 bottlecoords = []
-bottleset = set()
+bottleLst = []
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--prototxt", required=True,
@@ -29,7 +57,7 @@ CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
 IGNORE = set(["background", "aeroplane", "bicycle", "bird", "boat", "bus", "car", "cat", "chair", "cow", "diningtable",
 	"dog", "horse", "motorbike", "person", "pottedplant", "sheep",
 	"sofa", "train", "tvmonitor"])
-COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
+# COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 print(CLASSES, IGNORE)
 # load our serialized model from disk
 print("[INFO] loading model...")
@@ -74,23 +102,41 @@ while True:
             if CLASSES[idx] in IGNORE: continue
             box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
             (startX, startY, endX, endY) = box.astype("int")
-            bottleset.add(startX)
-            bottleset.add(startY)
-            bottleset.add(endX)
-            bottleset.add(endY)
+            bottleLst.append(startX)
+            bottleLst.append(startY)
+            bottleLst.append(endX)
+            bottleLst.append(endY)
 
 
-            bottlecoords.append(bottleset)
-            bottleset = set()
-            print(bottlecoords)
+            bottlecoords.append(bottleLst)
+            bottleLst = []
+            #print('bottlecoord',bottlecoords)
+
+            camera = cv2.VideoCapture(0)
+            i = 1
+            return_value, image = camera.read()
+            cv2.imwrite('opencv' + str(i) + '.png', image)
+            img = cv2.imread('/Users/kellyyu/PycharmProjects/new/venv/bin/opencv' + str(i) + '.png', 0)
+            #crop_img = img[bottlecoords[-1][1]:bottlecoords[-1][3], bottlecoords[-1][0]:bottlecoords[-1][2]]
+            #if bottlecoords[-1][1] > 0 and bottlecoords[-1][0] > 0:
+            #    print(bottlecoords[-1][1], bottlecoords[-1][3], bottlecoords[-1][0], bottlecoords[-1][2])
+            text = pytesseract.image_to_string(img)
+            print(text)
+            if "815137" in text or 'a PALE YELLOW' in text or 'BLET imprinted with UO' in text or '03297309' in text or 'PALE' in text:
+                label = "Take 1 tab by mouth"
+            else:
+                label = "Don't take this now"
+
+            del camera
+
+
 
             # draw the prediction on the frame
 
-            label = "{}: {:.2f}%".format(CLASSES[idx], confidence * 100)
-            cv2.rectangle(frame, (startX, startY), (endX, endY), COLORS[idx], 2)
+            # cv2.rectangle(frame, (startX, startY), (endX, endY), COLORS[idx], 2)
             y = startY - 15 if startY - 15 > 15 else startY + 15
             cv2.putText(frame, label, (startX, y),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLORS[idx], 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, colbottle, 2)
 
 
 	# show the output frame
